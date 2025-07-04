@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2>Riwayat Peminjaman</h2>
+
+    <div class="section filter-section">
+        <h3>Filter Riwayat Peminjaman</h3>
+        <form method="GET" action="{{ url_for('loan_history') }}" class="loan-history-filter-form">
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label for="filter_book_id">ID Buku:</label>
+                    <input type="text" id="filter_book_id" name="book_id" value="{{ applied_filters.book_id if applied_filters else '' }}" placeholder="Cari ID Buku...">
+                </div>
+                <div class="form-group">
+                    <label for="filter_book_title">Judul Buku:</label>
+                    <input type="text" id="filter_book_title" name="book_title" value="{{ applied_filters.book_title if applied_filters else '' }}" placeholder="Cari Judul...">
+                </div>
+                <div class="form-group">
+                    <label for="filter_book_author">Penulis Buku:</label>
+                    <input type="text" id="filter_book_author" name="book_author" value="{{ applied_filters.book_author if applied_filters else '' }}" placeholder="Cari Penulis...">
+                </div>
+                <div class="form-group">
+                    <label for="filter_borrower_name">Nama Peminjam:</label>
+                    <input type="text" id="filter_borrower_name" name="borrower_name" value="{{ applied_filters.borrower_name if applied_filters else '' }}" placeholder="Cari Nama Peminjam...">
+                </div>
+                <div class="form-group">
+                    <label for="filter_borrower_email">Email Peminjam:</label>
+                    <input type="email" id="filter_borrower_email" name="borrower_email" value="{{ applied_filters.borrower_email if applied_filters else '' }}" placeholder="Cari Email Peminjam...">
+                </div>
+                <div class="form-group">
+                    <label for="filter_petugas">Petugas Pencatat:</label>
+                    <input type="text" id="filter_petugas" name="petugas" value="{{ applied_filters.petugas if applied_filters else '' }}" placeholder="Cari Petugas...">
+                </div>
+                <div class="form-group">
+                    <label for="filter_status">Status Peminjaman:</label>
+                    <select id="filter_status" name="status">
+                        <option value="">Semua Status</option>
+                        <option value="Dipinjam" {% if applied_filters and applied_filters.status == 'Dipinjam' %}selected{% endif %}>Dipinjam</option>
+                        <option value="Dikembalikan" {% if applied_filters and applied_filters.status == 'Dikembalikan' %}selected{% endif %}>Dikembalikan (Tepat Waktu)</option>
+                        <option value="Dikembalikan (Terlambat)" {% if applied_filters and applied_filters.status == 'Dikembalikan (Terlambat)' %}selected{% endif %}>Dikembalikan (Terlambat)</option>
+                        <option value="Terlambat" {% if applied_filters and applied_filters.status == 'Terlambat' %}selected{% endif %}>Terlambat (Belum Dikembalikan)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filter_loan_date_start">Tanggal Pinjam Mulai:</label>
+                    <input type="date" id="filter_loan_date_start" name="loan_date_start" value="{{ applied_filters.loan_date_start if applied_filters else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="filter_loan_date_end">Tanggal Pinjam Sampai:</label>
+                    <input type="date" id="filter_loan_date_end" name="loan_date_end" value="{{ applied_filters.loan_date_end if applied_filters else '' }}">
+                </div>
+            </div>
+            <div class="button-group filter-buttons">
+                <button type="submit" class="button">Terapkan Filter</button>
+                <button type="button" class="button cancel-button" id="resetFilterButton">Reset Filter</button> {# Tambahkan ID untuk JavaScript #}
+            </div>
+        </form>
+    </div>
+
+    <div class="section">
+        <h3>Daftar Semua Peminjaman (Termasuk yang Sudah Dikembalikan)</h3>
+        <table class="data-table" id="loanHistoryTable">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>ID Buku</th>
+                    <th>Judul Buku</th>
+                    <th>Penulis</th>
+                    <th>Nama Peminjam</th>
+                    <th>Email Peminjam</th>
+                    <th>Tanggal Pinjam</th>
+                    <th>Batas Waktu</th>
+                    <th>Tanggal Dikembalikan</th>
+                    <th>Status</th>
+                    <th>Petugas</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if loans %}
+                    {% for loan in loans %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ loan.book_id }}</td>
+                        <td>{{ loan.book_title }}</td>
+                        <td>{{ loan.book_author }}</td>
+                        <td>{{ loan.borrower_name }}</td>
+                        <td>{{ loan.borrower_email if loan.borrower_email else '-' }}</td>
+                        <td>{{ loan.loan_date | datetimeformat }}</td>
+                        <td>{{ loan.due_date }}</td>
+                        <td>{{ loan.return_date | datetimeformat if loan.return_date else '-' }}</td>
+                        <td>
+                            {% if 'Terlambat' in loan.status_display %}
+                                <span class="overdue-text">{{ loan.status_display }}</span>
+                            {% else %}
+                                {{ loan.status_display }}
+                            {% endif %}
+                        </td>
+                        <td>{{ loan.petugas_name_display }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="11">Tidak ada riwayat peminjaman yang cocok dengan filter.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Pastikan DOM sudah dimuat sebelum mencoba mengakses elemen
+    document.addEventListener('DOMContentLoaded', function() {
+        const resetFilterButton = document.getElementById('resetFilterButton');
+        if (resetFilterButton) {
+            resetFilterButton.addEventListener('click', function() {
+                // Mengarahkan ke URL dasar riwayat peminjaman (tanpa parameter filter)
+                window.location.href = "{{ url_for('loan_history') }}";
+            });
+        }
+    });
+</script>
+{% endblock %}

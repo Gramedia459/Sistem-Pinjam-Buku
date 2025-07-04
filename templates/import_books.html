@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="upload-form-container">
+    <h2>Impor Buku dari CSV</h2>
+    <p>Unggah file CSV Anda untuk menambahkan banyak buku sekaligus. File harus memiliki header: <b>id_buku,judul_buku,penulis</b></p>
+    <p>Contoh format CSV:</p>
+    <pre>
+id_buku,judul_buku,penulis
+B001,Pemrograman Python,Guido van Rossum
+B002,Belajar Flask,Miguel Grinberg
+B003,Data Science Handbook,Jake VanderPlas</pre>
+
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('import_books') }}">
+        <div class="form-group">
+            <label for="file">Pilih File CSV:</label>
+            <input type="file" name="file" id="file" accept=".csv" required>
+        </div>
+        <button type="submit" class="button import-button">Unggah & Impor</button>
+        <a href="{{ url_for('dashboard') }}" class="button cancel-button">Batal</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistem Peminjaman Buku Gramedia{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {# --- LOADING OVERLAY START --- #}
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p>Mohon tunggu boss...</p>
+    </div>
+    {# --- LOADING OVERLAY END --- #}
+
+    <header>
+        <h1>Sistem Peminjaman Buku</h1>
+        <nav>
+            <ul class="nav-links"> {# Menggunakan ul.nav-links untuk konsistensi dengan struktur umum navbar #}
+                {% if 'username' in session %}
+                    <li><span>Selamat datang, {{ session['username'] }}!</span></li>
+                    <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li><a href="{{ url_for('loan_history') }}">Riwayat Peminjaman</a></li> {# BARIS BARU UNTUK RIWAYAT PEMINJAMAN #}
+                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2025 Sistem Peminjaman Buku || by. Store Administrative Clerk</p>
+    </footer>
+
+    {# --- JavaScript untuk Loading Overlay START --- #}
+    <script>
+        // Fungsi ini akan dijalankan setelah seluruh halaman (termasuk gambar dan aset) selesai dimuat.
+        window.addEventListener('load', function() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                }, 500);
+            }
+        });
+
+        // Fungsi ini akan menampilkan loading overlay saat navigasi internal atau submit form.
+        document.addEventListener('DOMContentLoaded', function() {
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    if (this.hostname === window.location.hostname && this.hash === '') {
+                        const loadingOverlay = document.getElementById('loading-overlay');
+                        if (loadingOverlay) {
+                            loadingOverlay.style.display = 'flex';
+                            loadingOverlay.style.opacity = '1';
+                        }
+                    }
+                });
+            });
+
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(event) {
+                    const loadingOverlay = document.getElementById('loading-overlay');
+                    if (loadingOverlay) {
+                        loadingOverlay.style.display = 'flex';
+                        loadingOverlay.style.opacity = '1';
+                    }
+                });
+            });
+        });
+    </script>
+    {# --- JavaScript untuk Loading Overlay END --- #}
+</body>
+</html>

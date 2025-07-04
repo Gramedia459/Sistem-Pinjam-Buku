@@ -1,0 +1,31 @@
+{# borrow_confirm.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Konfirmasi Peminjaman Buku</h2>
+    <p>Anda akan meminjam buku: <strong>{{ book.title }}</strong> oleh {{ book.author }}</p>
+
+    <form method="POST" action="{{ url_for('borrow_book', book_id=book.id) }}">
+        <div class="form-group">
+            <label for="borrower_name">Nama Peminjam:</label>
+            <input type="text" id="borrower_name" name="borrower_name" value="{{ default_borrower }}" required>
+        </div>
+        <div class="form-group">
+            <label for="borrower_email">Email Peminjam:</label>
+            <input type="email" id="borrower_email" name="borrower_email" placeholder="email@example.com" required>
+            <small>Email ini akan menerima konfirmasi peminjaman.</small>
+        </div>
+        <div class="form-group">
+            <label for="petugas_name_manual">Nama Petugas yang Mencatat (Opsional):</label>
+            <input type="text" id="petugas_name_manual" name="petugas_name_manual" placeholder="Nama Petugas">
+            <small>Jika kosong, akan diisi dengan nama pengguna yang login (jika ada).</small>
+        </div>
+        
+        <div class="button-group"> {# Tambahkan div pembungkus ini #}
+            <button type="submit" class="button confirm-button">Konfirmasi Peminjaman</button> {# Tambahkan kelas confirm-button #}
+            <a href="{{ url_for('dashboard') }}" class="button cancel-button">Batal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

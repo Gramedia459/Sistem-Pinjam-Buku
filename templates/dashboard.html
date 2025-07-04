@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2>Dashboard</h2>
+
+    {% if overdue_loans %}
+    <div class="notification overdue">
+        <h3>Notifikasi Keterlambatan!</h3>
+        <p>Buku-buku berikut sudah melewati batas waktu peminjaman:</p>
+        <ul>
+            {% for loan in overdue_loans %}
+            <li><strong>{{ loan.title }}</strong> oleh {{ loan.author }} (Batas Waktu: {{ loan.due_date }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h3>Tambah Buku Baru</h3>
+        <form method="POST" action="{{ url_for('add_book') }}" class="add-book-form">
+            <div class="form-group">
+                <label for="book_id">ID Buku (Opsional):</label>
+                <input type="text" id="book_id" name="book_id" placeholder="Otomatis jika kosong">
+            </div>
+            <div class="form-group">
+                <label for="title">Judul Buku:</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="author">Penulis:</label>
+                <input type="text" id="author" name="author" required>
+            </div>
+            <button type="submit">Tambah Buku</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <h3>Daftar Buku Tersedia</h3>
+        <a href="{{ url_for('import_books') }}" class="button import-button" style="margin-bottom: 15px;">Impor Buku dari CSV</a> {# Tambahkan baris ini #}
+        <table class="data-table" id="booksTable">
+            <thead>
+                <tr>
+                    <th>ID Buku</th>
+                    <th>Judul Buku</th>
+                    <th>Penulis</th>
+                    <th>Status</th>
+                    <th>Peminjam</th>
+                    <th>Aksi</th>
+                </tr>
+                {# Baris Filter Buku #}
+                <tr class="filter-row">
+                    <td><input type="text" id="filterId" onkeyup="filterBooksTable()" placeholder="Filter ID..."></td>
+                    <td><input type="text" id="filterTitle" onkeyup="filterBooksTable()" placeholder="Filter Judul..."></td>
+                    <td><input type="text" id="filterAuthor" onkeyup="filterBooksTable()" placeholder="Filter Penulis..."></td>
+                    <td>
+                        <select id="filterStatus" onchange="filterBooksTable()">
+                            <option value="">Semua Status</option>
+                            <option value="Tersedia">Tersedia</option>
+                            <option value="Dipinjam">Dipinjam</option>
+                        </select>
+                    </td>
+                    <td><input type="text" id="filterBorrower" onkeyup="filterBooksTable()" placeholder="Filter Peminjam..."></td>
+                    <td></td>
+                </tr>
+            </thead>
+            <tbody>
+                {# TIDAK ADA PERUBAHAN PADA LOOP JINJA INI #}
+                {% for book in books %}
+                <tr>
+                    <td>{{ book.id }}</td>
+                    <td>{{ book.title }}</td>
+                    <td>{{ book.author }}</td>
+                    <td>{{ book.status }}</td>
+                    <td>
+                        {% if book.status == 'Dipinjam' %}
+                            {{ book.current_borrower_name if book.current_borrower_name else 'Tidak diketahui' }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if book.status == 'Tersedia' %}
+                            <a href="{{ url_for('borrow_book', book_id=book.id) }}" class="button borrow-button">Pinjam</a>
+                        {% else %}
+                            <span class="button disabled">Dipinjam</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {# TOMBOL UNTUK MENAMPILKAN LEBIH BANYAK BUKU #}
+        <div id="showMoreBooksContainer" style="text-align: center; margin-top: 15px;">
+            <button id="showMoreBooksButton" class="button">Tampilkan Semua Buku</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Peminjaman Aktif</h3>
+        <table class="data-table" id="loansTable"> {# Tambahkan ID untuk tabel peminjaman #}
+            <thead>
+                <tr>
+                    <th>ID Buku</th> {# <--- BARIS BARU UNTUK HEADER ID BUKU #}
+                    <th>Judul Buku</th>
+                    <th>Penulis</th>
+                    <th>Peminjam</th>
+                    <th>Email Peminjam</th>
+                    <th>Tanggal Pinjam</th>
+                    <th>Batas Waktu</th>
+                    <th>Sisa Waktu</th>
+                    <th>Petugas yang Mencatat</th>
+                    <th>Status Pengembalian</th>
+                    <th>Aksi</th>
+                </tr>
+                {# Baris Filter Peminjaman #}
+                <tr class="filter-row">
+                    <td><input type="text" id="filterLoanBookId" onkeyup="filterLoansTable()" placeholder="Filter ID Buku..."></td> {# <--- BARIS BARU UNTUK FILTER ID BUKU #}
+                    <td><input type="text" id="filterLoanTitle" onkeyup="filterLoansTable()" placeholder="Filter Judul..."></td>
+                    <td><input type="text" id="filterLoanAuthor" onkeyup="filterLoansTable()" placeholder="Filter Penulis..."></td>
+                    <td><input type="text" id="filterLoanBorrower" onkeyup="filterLoansTable()" placeholder="Filter Peminjam..."></td>
+                    <td><input type="text" id="filterLoanEmail" onkeyup="filterLoansTable()" placeholder="Filter Email..."></td>
+                    <td></td> {# Tanggal Pinjam tidak perlu filter teks, atau bisa ditambahkan jika ingin filter tanggal #}
+                    <td></td> {# Batas Waktu tidak perlu filter #}
+                    <td></td> {# Sisa Waktu tidak perlu filter #}
+                    <td><input type="text" id="filterLoanPetugas" onkeyup="filterLoansTable()" placeholder="Filter Petugas..."></td>
+                    <td></td> {# Status Pengembalian tidak perlu filter untuk aktif #}
+                    <td></td> {# Kolom aksi tidak perlu filter #}
+                </tr>
+            </thead>
+            <tbody>
+                {% if loans %}
+                    {% for loan in loans %}
+                    <tr>
+                        <td>{{ loan.book_id }}</td> {# <--- BARIS BARU UNTUK MENAMPILKAN ID BUKU #}
+                        <td>{{ loan.title }}</td>
+                        <td>{{ loan.author }}</td>
+                        <td>{{ loan.borrower_display_name if loan.borrower_display_name else 'Tidak diketahui' }}</td>
+                        <td>{{ loan.borrower_email if loan.borrower_email else '-' }}</td>
+                        <td>{{ loan.loan_date }}</td>
+                        <td class="{{ 'overdue-text' if (loan.due_date | is_overdue) }}">
+                            {{ loan.due_date }}
+                        </td>
+                        <td class="countdown-timer" data-due-date="{{ loan.due_date }}">
+                            Memuat...
+                        </td>
+                        <td>{{ loan.petugas_display_name if loan.petugas_display_name else '-' }}</td> {# Menggunakan petugas_display_name #}
+                        <td>
+                            {% if loan.return_date %}
+                                Dikembalikan: {{ loan.return_date }}
+                            {% else %}
+                                Belum Dikembalikan
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not loan.return_date %}
+                                <a href="{{ url_for('return_book', loan_id=loan.loan_id) }}" class="button return-button">Kembalikan</a>
+                            {% else %}
+                                <span class="button disabled">Sudah Dikembalikan</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="11">Tidak ada peminjaman aktif.</td> {# <--- UBAH COLSPAN DARI 10 KE 11 #}
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Fungsi untuk update countdown timer
+    function updateCountdown() {
+        const countdownElements = document.querySelectorAll('.countdown-timer');
+        const now = new Date();
+
+        countdownElements.forEach(element => {
+            const dueDateStr = element.dataset.dueDate;
+            if (!dueDateStr) return;
+
+            const [year, month, day] = dueDateStr.split('-').map(Number);
+            const dueDate = new Date(year, month - 1, day, 23, 59, 59); 
+
+            const diff = dueDate.getTime() - now.getTime();
+
+            if (diff <= 0) {
+                element.textContent = 'Terlambat!';
+                element.classList.add('overdue-text');
+            } else {
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                let countdownText = '';
+                if (days > 0) {
+                    countdownText += `${days} hari `;
+                }
+                const formattedHours = String(hours).padStart(2, '0');
+                const formattedMinutes = String(minutes).padStart(2, '0');
+                const formattedSeconds = String(seconds).padStart(2, '0');
+
+                countdownText += `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+                
+                element.textContent = countdownText;
+                element.classList.remove('overdue-text');
+            }
+        });
+    }
+
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    // --- Fungsi Filter Tabel Buku (booksTable) ---
+    // Diperbarui untuk bekerja dengan baris yang ditampilkan secara selektif
+    let allBookRows = []; // Menyimpan semua baris buku asli
+    const booksPerPage = 10; // Jumlah buku yang ingin ditampilkan
+    let currentPage = 1; // Halaman saat ini (untuk pagination di masa depan, saat ini hanya "tampilkan semua")
+
+    function initializeBooksDisplay() {
+        const table = document.getElementById("booksTable");
+        // Mulai dari indeks 2 untuk melewati thead dan baris filter
+        allBookRows = Array.from(table.getElementsByTagName("tbody")[0].getElementsByTagName("tr"));
+        
+        // Sembunyikan semua baris terlebih dahulu
+        allBookRows.forEach(row => row.style.display = "none");
+
+        // Tampilkan hanya buku-buku awal
+        for (let i = 0; i < Math.min(booksPerPage, allBookRows.length); i++) {
+            allBookRows[i].style.display = "";
+        }
+
+        const showMoreButton = document.getElementById("showMoreBooksButton");
+        if (allBookRows.length <= booksPerPage) {
+            // Jika jumlah buku tidak lebih dari batas, sembunyikan tombol
+            showMoreButton.style.display = "none";
+        } else {
+            showMoreButton.style.display = "block"; // Tampilkan tombol jika ada lebih banyak buku
+        }
+    }
+
+    function showAllBooks() {
+        allBookRows.forEach(row => row.style.display = "");
+        document.getElementById("showMoreBooksButton").style.display = "none"; // Sembunyikan tombol setelah semua ditampilkan
+    }
+
+    // Panggil fungsi inisialisasi saat DOM selesai dimuat
+    document.addEventListener('DOMContentLoaded', initializeBooksDisplay);
+
+    // Tambahkan event listener untuk tombol "Tampilkan Semua Buku"
+    document.getElementById("showMoreBooksButton").addEventListener("click", showAllBooks);
+
+
+    // --- Modifikasi filterBooksTable() agar bekerja dengan semua baris (allBookRows) ---
+    function filterBooksTable() {
+        const tableBody = document.getElementById("booksTable").getElementsByTagName("tbody")[0];
+        const allRows = Array.from(tableBody.getElementsByTagName("tr")); // Dapatkan semua baris dari tbody
+
+        const filterId = document.getElementById("filterId").value.toUpperCase();
+        const filterTitle = document.getElementById("filterTitle").value.toUpperCase();
+        const filterAuthor = document.getElementById("filterAuthor").value.toUpperCase();
+        const filterStatus = document.getElementById("filterStatus").value.toUpperCase();
+        const filterBorrower = document.getElementById("filterBorrower").value.toUpperCase();
+
+        let visibleCount = 0;
+        const maxVisible = booksPerPage; // Batas tampilan awal saat tidak ada filter
+
+        allRows.forEach(row => {
+            const tdId = row.getElementsByTagName("td")[0];
+            const tdTitle = row.getElementsByTagName("td")[1];
+            const tdAuthor = row.getElementsByTagName("td")[2];
+            const tdStatus = row.getElementsByTagName("td")[3];
+            const tdBorrower = row.getElementsByTagName("td")[4];
+
+            let rowMatches = true;
+
+            if (tdId && tdId.textContent.toUpperCase().indexOf(filterId) === -1) {
+                rowMatches = false;
+            }
+            if (tdTitle && tdTitle.textContent.toUpperCase().indexOf(filterTitle) === -1) {
+                rowMatches = false;
+            }
+            if (tdAuthor && tdAuthor.textContent.toUpperCase().indexOf(filterAuthor) === -1) {
+                rowMatches = false;
+            }
+            if (filterStatus !== "" && tdStatus && tdStatus.textContent.toUpperCase() !== filterStatus) {
+                rowMatches = false;
+            }
+            if (tdBorrower && tdBorrower.textContent.toUpperCase().indexOf(filterBorrower) === -1) {
+                rowMatches = false;
+            }
+
+            if (rowMatches) {
+                row.style.display = ""; // Tampilkan baris jika cocok
+                visibleCount++;
+            } else {
+                row.style.display = "none"; // Sembunyikan baris jika tidak cocok
+            }
+        });
+
+        // Sembunyikan tombol "Tampilkan Semua Buku" saat filter diterapkan
+        // Karena filter akan menampilkan semua yang cocok, terlepas dari batas 10 item.
+        document.getElementById("showMoreBooksButton").style.display = "none";
+    }
+
+    // --- Fungsi Filter Tabel Peminjaman (loansTable) ---
+    function filterLoansTable() {
+        const table = document.getElementById("loansTable");
+        const tr = table.getElementsByTagName("tr");
+
+        const filterLoanBookId = document.getElementById("filterLoanBookId").value.toUpperCase();
+        const filterLoanTitle = document.getElementById("filterLoanTitle").value.toUpperCase();
+        const filterLoanAuthor = document.getElementById("filterLoanAuthor").value.toUpperCase();
+        const filterLoanBorrower = document.getElementById("filterLoanBorrower").value.toUpperCase(); 
+        const filterLoanEmail = document.getElementById("filterLoanEmail").value.toUpperCase(); 
+        const filterLoanPetugas = document.getElementById("filterLoanPetugas").value.toUpperCase(); 
+
+        for (let i = 2; i < tr.length; i++) {
+            const tdBookId = tr[i].getElementsByTagName("td")[0]; // ID Buku
+            const tdTitle = tr[i].getElementsByTagName("td")[1]; // Judul Buku
+            const tdAuthor = tr[i].getElementsByTagName("td")[2]; // Penulis
+            const tdBorrower = tr[i].getElementsByTagName("td")[3]; // Peminjam
+            const tdEmail = tr[i].getElementsByTagName("td")[4]; // Email Peminjam
+            const tdPetugas = tr[i].getElementsByTagName("td")[8]; // Petugas
+
+            let rowMatches = true;
+
+            if (tdBookId && tdBookId.textContent.toUpperCase().indexOf(filterLoanBookId) === -1) {
+                rowMatches = false;
+            }
+            if (tdTitle && tdTitle.textContent.toUpperCase().indexOf(filterLoanTitle) === -1) {
+                rowMatches = false;
+            }
+            if (tdAuthor && tdAuthor.textContent.toUpperCase().indexOf(filterLoanAuthor) === -1) {
+                rowMatches = false;
+            }
+            if (tdBorrower && tdBorrower.textContent.toUpperCase().indexOf(filterLoanBorrower) === -1) {
+                rowMatches = false;
+            }
+            if (tdEmail && tdEmail.textContent.toUpperCase().indexOf(filterLoanEmail) === -1) {
+                rowMatches = false;
+            }
+            if (tdPetugas && tdPetugas.textContent.toUpperCase().indexOf(filterLoanPetugas) === -1) {
+                rowMatches = false;
+            }
+
+            if (rowMatches) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+</script>
+
+{% endblock %}

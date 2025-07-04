@@ -1,0 +1,7 @@
+Flask==X.X.X
+gunicorn==X.X.X
+gspread==X.X.X
+google-auth==X.X.X
+google-auth-oauthlib==X.X.X
+apscheduler==X.X.X
+# csv dan os adalah bawaan Python, tidak perlu dicantumkan di requirements.txt
